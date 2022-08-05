@@ -1,0 +1,9 @@
+[workspace]
+members = [
+    "client",
+    "server",
+]
+
+[patch.crates-io]
+pmrmodel = { git = "https://github.com/metatoaster/pmrmodel.git", branch = "main" }
+# pmrmodel = { path = "../pmrmodel" }
