@@ -1,5 +1,5 @@
-use crate::sauron;
-use crate::sauron::prelude::*;
+use client::sauron;
+use client::sauron::prelude::*;
 
 pub fn index() -> Node<()> {
     node! {
