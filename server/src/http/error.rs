@@ -39,6 +39,9 @@ impl Error {
 impl IntoResponse for Error {
     fn into_response(self) -> Response {
         let body = match self {
+            Self::Anyhow(ref e) => {
+                log::error!("Unhandled error: {:?}", e);
+            },
             _ => (),
         };
         (self.status_code(), body).into_response()
