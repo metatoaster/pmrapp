@@ -41,7 +41,7 @@ struct AppContext {
 pub async fn serve(config: Config, backend: SqliteBackend) -> anyhow::Result<()> {
     let socket: SocketAddr = ([0, 0, 0, 0], config.http_port).into();
     let app = router()
-        .merge(api::workspace::router())
+        .nest("/api/workspace", api::workspace::router())
         .layer(
             ServiceBuilder::new()
             .layer(Extension(AppContext {

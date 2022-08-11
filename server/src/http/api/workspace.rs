@@ -24,20 +24,18 @@ use crate::http::{Error, Result};
 
 pub fn router() -> Router {
     Router::new()
-        // TODO remove /api/workspace, set mount point
-        .route("/api/workspace", get(api_workspace))
-        .route("/api/workspace/:workspace_id/",
+        .route("/", get(api_workspace))
+        .route("/:workspace_id/",
             get(api_workspace_pathinfo_workspace_id))
-        .route("/api/workspace/:workspace_id/file/",
+        .route("/:workspace_id/file/",
             get(api_workspace_pathinfo_workspace_id))
-        .route("/api/workspace/:workspace_id/file/:commit_id/*path",
+        .route("/:workspace_id/file/:commit_id/*path",
             get(api_workspace_pathinfo_workspace_id_commit_id_path))
 }
 
 async fn api_workspace(ctx: Extension<AppContext>) -> Result<Response> {
     let records = WorkspaceBackend::list_workspaces(&ctx.backend).await?;
     Ok(Json(JsonWorkspaceRecords { workspaces: &records }).into_response())
-    // stream_workspace_records_as_json(std::io::stdout(), &records)?;
 }
 
 async fn api_workspace_pathinfo(
