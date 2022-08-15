@@ -12,8 +12,7 @@ use pmrmodel::{
     },
     repo::git::{
         GitPmrAccessor,
-        GitResultSet,
-        object_to_info,
+        ObjectInfo,
     }
 };
 use std::path::PathBuf;
@@ -40,7 +39,7 @@ pub fn router() -> Router {
 
 async fn api_workspace(ctx: Extension<AppContext>) -> Result<Response> {
     let records = WorkspaceBackend::list_workspaces(&ctx.backend).await?;
-    Ok(Json(JsonWorkspaceRecords { workspaces: &records }).into_response())
+    Ok(Json(JsonWorkspaceRecords { workspaces: records }).into_response())
 }
 
 async fn api_workspace_pathinfo(
@@ -48,7 +47,7 @@ async fn api_workspace_pathinfo(
     workspace_id: i64,
     commit_id: Option<String>,
     path: Option<String>,
-) -> Result<Response> {
+) -> Result<Json<ObjectInfo>> {
     let workspace = match WorkspaceBackend::get_workspace_by_id(&ctx.backend, workspace_id).await {
         Ok(workspace) => workspace,
         Err(_) => return Err(Error::NotFound),
@@ -59,16 +58,18 @@ async fn api_workspace_pathinfo(
         workspace
     );
 
-    fn json_result(git_result_set: &GitResultSet) -> Response {
-        Json(object_to_info(&git_result_set.repo, &git_result_set.object)).into_response()
-    }
-
     match git_pmr_accessor.process_pathinfo(
         commit_id.as_deref(),
         path.as_deref(),
-        json_result
+        |result| <Option<ObjectInfo>>::from(result)
     ).await {
-        Ok(result) => Ok(result),
+        Ok(result) => match result {
+            Some(result) => Ok(Json(result)),
+            // tags and other random nodes are not part of the path
+            // TODO subrepo/tree vs. embedded workspace links to be
+            // redirected
+            None => Err(Error::NotFound),
+        }
         Err(e) => {
             // TODO log the URI triggering these messages?
             log::info!("git_pmr_accessor.process_pathinfo error: {:?}", e);
@@ -80,14 +81,14 @@ async fn api_workspace_pathinfo(
 async fn api_workspace_pathinfo_workspace_id(
     ctx: Extension<AppContext>,
     Path(workspace_id): Path<i64>,
-) -> Result<Response> {
+) -> Result<Json<ObjectInfo>> {
     api_workspace_pathinfo(ctx, workspace_id, None, None).await
 }
 
 async fn api_workspace_pathinfo_workspace_id_commit_id_path(
     ctx: Extension<AppContext>,
     Path((workspace_id, commit_id, path)): Path<(i64, Option<String>, Option<String>)>,
-) -> Result<Response> {
+) -> Result<Json<ObjectInfo>> {
     api_workspace_pathinfo(ctx, workspace_id, commit_id, path).await
 }
 
