@@ -1,20 +1,13 @@
 use axum::{
     extract::{Extension, Path},
     Json,
-    response::{IntoResponse, Response},
     routing::get,
     Router,
 };
-use pmrmodel::{
-    model::workspace::{
-        WorkspaceBackend,
-        JsonWorkspaceRecords,
-    },
-    repo::git::{
-        GitPmrAccessor,
-        ObjectInfo,
-    }
-};
+use pmrmodel::model::workspace::WorkspaceBackend;
+use pmrmodel::repo::git::GitPmrAccessor;
+use pmrmodel_base::git::ObjectInfo;
+use pmrmodel_base::workspace::JsonWorkspaceRecords;
 use std::path::PathBuf;
 
 use crate::http::AppContext;
@@ -37,9 +30,9 @@ pub fn router() -> Router {
             get(api_workspace_pathinfo_workspace_id_commit_id_path))
 }
 
-async fn api_workspace(ctx: Extension<AppContext>) -> Result<Response> {
+pub async fn api_workspace(ctx: Extension<AppContext>) -> Result<Json<JsonWorkspaceRecords>> {
     let records = WorkspaceBackend::list_workspaces(&ctx.backend).await?;
-    Ok(Json(JsonWorkspaceRecords { workspaces: records }).into_response())
+    Ok(Json(JsonWorkspaceRecords { workspaces: records }))
 }
 
 async fn api_workspace_pathinfo(
@@ -78,7 +71,7 @@ async fn api_workspace_pathinfo(
     }
 }
 
-async fn api_workspace_pathinfo_workspace_id(
+pub async fn api_workspace_pathinfo_workspace_id(
     ctx: Extension<AppContext>,
     Path(workspace_id): Path<i64>,
 ) -> Result<Json<ObjectInfo>> {

@@ -1,5 +1,10 @@
 use axum::{
     extract::Extension,
+    http::header::{
+        HeaderMap,
+        HeaderName,
+        HeaderValue,
+    },
     Json,
     response::{
         Html,
@@ -19,20 +24,21 @@ use tower::ServiceBuilder;
 use tower_http::trace::TraceLayer;
 
 use crate::config::Config;
-use client::sauron::Render;
 pub use client::sauron;
 
 mod page;
 mod error;
 mod api;
+mod workspace;
 
 pub use error::Error;
 
 pub type Result<T, E = Error> = std::result::Result<T, E>;
 
 
+// TODO figure out if this can actually be pub
 #[derive(Clone)]
-struct AppContext {
+pub struct AppContext {
     config: Arc<Config>,
     backend: SqliteBackend,
 }
@@ -41,6 +47,7 @@ struct AppContext {
 pub async fn serve(config: Config, backend: SqliteBackend) -> anyhow::Result<()> {
     let socket: SocketAddr = ([0, 0, 0, 0], config.http_port).into();
     let app = router()
+        .nest("/workspace/", workspace::router())
         .nest("/api/workspace/", api::workspace::router())
         .layer(
             ServiceBuilder::new()
@@ -64,12 +71,15 @@ fn router() -> Router {
     Router::new()
         .route("/", get(index_root))
         .route("/api/", get(api_root))
+        .route("/pkg/client.js", get(client_js))
+        .route("/pkg/client_bg.wasm", get(client_bg_wasm))
 }
 
 // placeholder thingers
 async fn index_root() -> Response {
-    let index = page::index().render_to_string();
-    Html(index).into_response()
+    // let index = page::index().render_to_string();
+    // more placeholder here until we figure out what to do for the index
+    Html("Index Page").into_response()
 }
 
 #[derive(Serialize)]
@@ -80,4 +90,20 @@ struct Page {
 async fn api_root() -> Response {
     let resp = Page { name: "index".to_string() };
     Json(resp).into_response()
+}
+
+async fn client_js() -> (HeaderMap, String) {
+    let mut headers = HeaderMap::new();
+    headers.insert(HeaderName::from_static("content-type"),
+        HeaderValue::from_static("text/javascript"));
+
+    (headers, include_str!("../../../client/pkg/client.js").to_string())
+}
+
+async fn client_bg_wasm() -> (HeaderMap, Vec<u8>) {
+    let mut headers = HeaderMap::new();
+    headers.insert(HeaderName::from_static("content-type"),
+        HeaderValue::from_static("application/wasm"));
+
+    (headers, include_bytes!("../../../client/pkg/client_bg.wasm").to_vec())
 }
