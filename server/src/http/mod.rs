@@ -25,6 +25,8 @@ use tower_http::trace::TraceLayer;
 
 use crate::config::Config;
 pub use client::sauron;
+use client::App;
+use client::sauron::Render;
 
 mod page;
 mod error;
@@ -77,9 +79,9 @@ fn router() -> Router {
 
 // placeholder thingers
 async fn index_root() -> Response {
-    // let index = page::index().render_to_string();
-    // more placeholder here until we figure out what to do for the index
-    Html("Index Page").into_response()
+    let app = App::with_homepage();
+    let content = page::index(&app).render_to_string();
+    Html(content).into_response()
 }
 
 #[derive(Serialize)]

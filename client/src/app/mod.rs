@@ -27,6 +27,7 @@ pub enum FetchStatus<T> {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Resource {
+    Homepage,
     WorkspaceListing,
     Workspace(i64),
 }
@@ -96,6 +97,13 @@ impl Application<Msg> for App {
         node! {
             <body class="main">
                 <header>
+                    <a relative href="/"
+                        on_click=|e| {
+                            e.prevent_default();
+                            Msg::Retrieve(Resource::Homepage, "/".to_string())
+                        }>
+                        "Home"
+                    </a>
                     <a relative href="/workspace/"
                         on_click=|e| {
                             e.prevent_default();
@@ -122,6 +130,11 @@ impl Application<Msg> for App {
             // core application related
             Msg::Retrieve(resource, url) => {
                 match resource {
+                    Resource::Homepage => {
+                        Self::push_state(resource, &url);
+                        self.is_loading = true;
+                        self.fetch_homepage()
+                    }
                     Resource::WorkspaceListing => {
                         Self::push_state(resource, &url);
                         self.is_loading = true;
@@ -150,6 +163,9 @@ impl Application<Msg> for App {
                 log::trace!("UrlChanged: {}", url);
                 self.is_loading = true;
                 match resource {
+                    Resource::Homepage => {
+                        self.fetch_homepage()
+                    },
                     Resource::WorkspaceListing => {
                         self.fetch_workspace_listing()
                     },
@@ -183,6 +199,14 @@ impl App {
 }
 
 impl App {
+    pub fn with_homepage() -> Self {
+        Self {
+            content: FetchStatus::Complete(Content::Homepage),
+            is_loading: false,
+            resource: Some(Resource::Homepage),
+        }
+    }
+
     pub fn with_workspace_listing(workspace_listing: JsonWorkspaceRecords) -> Self {
         Self {
             content: FetchStatus::Complete(Content::from(workspace_listing)),
@@ -202,6 +226,12 @@ impl App {
 
 #[cfg(feature = "wasm")]
 impl App {
+    fn fetch_homepage(&self) -> Cmd<Self, Msg> {
+        Cmd::new(move|program| {
+            program.dispatch(Msg::ReceivedContent(Content::Homepage));
+        })
+    }
+
     fn fetch_workspace_listing(&self) -> Cmd<Self, Msg> {
         Cmd::new(move|program| {
             let async_fetch = |program:Program<Self,Msg>| async move{

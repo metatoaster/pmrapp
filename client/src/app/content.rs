@@ -17,6 +17,7 @@ use crate::app::Msg;
     Debug, Deserialize, Serialize, PartialEq, Clone, derive_more::From,
 )]
 pub enum Content {
+    Homepage,
     WorkspaceListing(JsonWorkspaceRecords),
     Workspace(ObjectInfo),
 }
@@ -25,6 +26,22 @@ pub enum Content {
 impl Content {
     pub fn view(&self) -> Node<app::Msg> {
         match self {
+            Content::Homepage => {
+                node! {
+                    <div class="index">
+                        <h1>"Physiome Model Repository"</h1>
+                        <p>"Welcome to the Physiome Model Repository"</p>
+                        <dl>
+                            <dt><a href="/workspace/"
+                                on_click=|e| {
+                                    e.prevent_default();
+                                    Msg::Retrieve(Resource::WorkspaceListing, "/workspace/".to_string())
+                                }>"Workspace Listing"</a></dt>
+                          <dd>"Listing of all workspaces in the repository."</dd>
+                        </dl>
+                    </div>
+                }
+            }
             Content::WorkspaceListing(records) => {
                 node! {
                     <div class="workspace-listing">
