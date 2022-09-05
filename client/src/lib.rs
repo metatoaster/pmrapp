@@ -13,6 +13,9 @@ pub async fn main(serialized_state: String) {
         console_log::init_with_level(log::Level::Trace).ok();
         console_error_panic_hook::set_once();
     }
+    if serialized_state == "" {
+        return;
+    }
 
     let app = match serde_json::from_str::<App>(&serialized_state) {
         Ok(app_state) => app_state,

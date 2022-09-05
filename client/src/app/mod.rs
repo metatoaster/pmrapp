@@ -113,8 +113,6 @@ impl Application<Msg> for App {
     fn init(&mut self) -> Cmd<Self, Msg> {
         // Only calling this init if this is not default, i.e. not the default app
         // created when loading failed in client/src/lib.rs main function
-        // TODO figure out a more elegant way to fix this once I figure out what
-        // this is really doing along with underlying cause...
         if self.fetch.is_none() {
             return Cmd::none();
         }
