@@ -55,7 +55,7 @@ impl Content {
                     href=format!("/workspace/{}/", workspace_id)
                     on_click=move |e| {
                         e.prevent_default();
-                        Msg::Fetching(Fetch::Workspace(workspace_id))
+                        Msg::Fetching(Fetch::Workspace(workspace_id), format!("/workspace/{}/", workspace_id))
                     }
                 >{ text!("Workspace: {}", workspace_id) }
                 </a></div>

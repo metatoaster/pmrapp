@@ -32,7 +32,7 @@ pub enum Fetch {
 }
 
 pub enum Msg {
-    Fetching(Fetch),
+    Fetching(Fetch, String),
 
     // new content and url
     ReceivedContent(Content),
@@ -55,54 +55,6 @@ impl Default for App {
             content: FetchStatus::Idle,
             is_loading: true,
             fetch: None,
-        }
-    }
-}
-
-trait Resource<T> {
-    fn to_url(&self) -> String;
-    fn from_url(url: &str) -> Option<T>;
-}
-
-struct WorkspaceListing {
-}
-
-impl Resource<()> for WorkspaceListing {
-    // TODO figure out how to apply uritemplates into this mess
-    fn to_url(&self) -> String {
-        format!("/workspace/")
-    }
-
-    fn from_url(url: &str) -> Option<()> {
-        match url {
-            "/workspace/" => Some(()),
-            _ => None,
-        }
-    }
-}
-
-struct WorkspaceItem {
-    id: i64,
-}
-
-impl Resource<i64> for WorkspaceItem {
-    // TODO figure out how to apply uritemplates into this mess
-    fn to_url(&self) -> String {
-        format!("/workspace/{}/", &self.id)
-    }
-
-    fn from_url(url: &str) -> Option<i64> {
-        if url.starts_with("/workspace/") {
-            let parts = url.split("/").collect::<Vec<_>>();
-            if parts.len() >= 3 {
-                parts[2].parse::<i64>().ok()
-            }
-            else {
-                None
-            }
-        }
-        else {
-            None
         }
     }
 }
@@ -157,7 +109,7 @@ impl Application<Msg> for App {
                     <a relative href="/workspace/"
                         on_click=|e| {
                             e.prevent_default();
-                            Msg::Fetching(Fetch::WorkspaceListing)
+                            Msg::Fetching(Fetch::WorkspaceListing, "/workspace/".to_string())
                         }>
                         "Workspace Listing"
                     </a>
@@ -178,16 +130,16 @@ impl Application<Msg> for App {
     fn update(&mut self, msg: Msg) -> Cmd<Self, Msg> {
         match msg {
             // core application related
-            Msg::Fetching(fetch) => {
+            Msg::Fetching(fetch, url) => {
                 match fetch {
                     Fetch::WorkspaceListing => {
-                        Self::push_state(fetch, "/workspace/");
+                        Self::push_state(fetch, &url);
                         self.is_loading = true;
                         log::trace!("pushed Msg::Fetching(Fetch::WorkspaceListing)");
                         self.fetch_workspace_listing()
                     }
                     Fetch::Workspace(workspace_id) => {
-                        Self::push_state(fetch, &(WorkspaceItem { id: workspace_id }).to_url());
+                        Self::push_state(fetch, &url);
                         self.is_loading = true;
                         log::trace!("pushed Msg::Fetching(Fetch::Workspace(id))");
                         self.fetch_workspace(workspace_id)
