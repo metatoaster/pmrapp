@@ -43,9 +43,10 @@ async fn render_workspace(
     ctx: Extension<AppContext>,
     path: Path<i64>,
 ) -> Response {
+    let workspace_id = path.0;
     match api::workspace::api_workspace_pathinfo_workspace_id(ctx, path).await {
         Ok(Json(object_info)) => {
-            let app = App::with_workspace(object_info);
+            let app = App::with_workspace(workspace_id, object_info);
             let content = page::index(&app).render_to_string();
             Html(content).into_response()
         },

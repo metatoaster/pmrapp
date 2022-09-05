@@ -26,3 +26,7 @@ crate-type = ["cdylib", "rlib"]
 [features]
 default = ["wasm"]
 wasm = ["wasm-bindgen", "wasm-bindgen-futures", "console_error_panic_hook", "console_log"]
+
+[dependencies.web-sys]
+version = "0.3"
+features = ["PopStateEvent"]

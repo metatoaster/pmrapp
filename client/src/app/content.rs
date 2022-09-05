@@ -10,6 +10,7 @@ use pmrmodel_base::{
     git::ObjectInfo,
 };
 
+use crate::app::Fetch;
 use crate::app::Msg;
 
 #[derive(
@@ -54,7 +55,7 @@ impl Content {
                     href=format!("/workspace/{}/", workspace_id)
                     on_click=move |e| {
                         e.prevent_default();
-                        Msg::FetchWorkspace(workspace_id)
+                        Msg::Fetching(Fetch::Workspace(workspace_id))
                     }
                 >{ text!("Workspace: {}", workspace_id) }
                 </a></div>

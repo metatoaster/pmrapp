@@ -19,7 +19,7 @@ async function start() {{
   await main(app_state);
 }}
 start();\
-                        ",serialized_state)}
+                        ", serialized_state)}
                 </script>
             </head>
             { app.view() }

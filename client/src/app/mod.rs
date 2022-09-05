@@ -9,6 +9,7 @@ use sauron::prelude::*;
 use serde::{Deserialize, Serialize};
 #[cfg(feature = "wasm")]
 use wasm_bindgen_futures::spawn_local;
+use web_sys::PopStateEvent;
 
 mod content;
 
@@ -24,23 +25,28 @@ pub enum FetchStatus<T> {
     Error(String),
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum Fetch {
+    WorkspaceListing,
+    Workspace(i64),
+}
+
 pub enum Msg {
-    FetchWorkspaceListing,
-    FetchWorkspace(i64),
+    Fetching(Fetch),
 
     // new content and url
     ReceivedContent(Content),
     // for dealing with error responses
     RequestError(ServerError),
     // for the URL push state
-    UrlChanged(String),
+    UrlChanged(Fetch, String),
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct App {
     pub content: FetchStatus<Content>,
     is_loading: bool,
-    label: String,
+    fetch: Option<Fetch>,
 }
 
 impl Default for App {
@@ -48,7 +54,7 @@ impl Default for App {
         Self {
             content: FetchStatus::Idle,
             is_loading: true,
-            label: format!("Default"),
+            fetch: None,
         }
     }
 }
@@ -109,22 +115,32 @@ impl Application<Msg> for App {
         // created when loading failed in client/src/lib.rs main function
         // TODO figure out a more elegant way to fix this once I figure out what
         // this is really doing along with underlying cause...
-        if &self.label == "Default" {
+        if self.fetch.is_none() {
             return Cmd::none();
         }
         let mut commands = vec![];
-        log::trace!("calling init: {}", &self.label);
-        let listen_to_url_changes = Window::add_event_listeners(vec![on_popstate(|_e| {
-            log::trace!("pop_state is triggered in sauron add event listener");
+        let listen_to_url_changes = Window::add_event_listeners(vec![on_popstate(|e| {
+            log::trace!("pop_state is triggered in sauron add event listener - state: {:#?}", PopStateEvent::from(JsValue::from(&e)).state());
             let url = sauron::window()
                 .location()
                 .pathname()
                 .expect("must have get a pathname");
-            Msg::UrlChanged(url)
+            // TODO if the state is unsupported, this blows up
+            Msg::UrlChanged(
+                PopStateEvent::from(JsValue::from(e)).state().into_serde::<Fetch>().unwrap(),
+                url
+            )
         })]);
+
+        let history = sauron::window().history().expect("must have history");
+        log::trace!("setting initial state: {:#?}", self.fetch);
+        history
+            .replace_state(&JsValue::from_serde(&Some(self.fetch.as_ref())).unwrap(), "")
+            .expect("must push state");
 
         commands.push(listen_to_url_changes);
 
+        /*
         match self.content {
             FetchStatus::Idle => {
                 // TODO figure out what are the default things to fetch??
@@ -132,6 +148,7 @@ impl Application<Msg> for App {
             }
             _ => (),
         }
+        */
         Cmd::batch(commands)
     }
 
@@ -142,7 +159,7 @@ impl Application<Msg> for App {
                     <a relative href="/workspace/"
                         on_click=|e| {
                             e.prevent_default();
-                            Msg::FetchWorkspaceListing
+                            Msg::Fetching(Fetch::WorkspaceListing)
                         }>
                         "Workspace Listing"
                     </a>
@@ -163,16 +180,21 @@ impl Application<Msg> for App {
     fn update(&mut self, msg: Msg) -> Cmd<Self, Msg> {
         match msg {
             // core application related
-            Msg::FetchWorkspaceListing => {
-                Self::push_state_url("/workspace/");
-                self.is_loading = true;
-                self.fetch_workspace_listing()
-            },
-            Msg::FetchWorkspace(workspace_id) => {
-                Self::push_state_url(&(WorkspaceItem { id: workspace_id }).to_url());
-                self.is_loading = true;
-                log::trace!("fetch_workspace in Msg::FetchWorkspace");
-                self.fetch_workspace(workspace_id)
+            Msg::Fetching(fetch) => {
+                match fetch {
+                    Fetch::WorkspaceListing => {
+                        Self::push_state(fetch, "/workspace/");
+                        self.is_loading = true;
+                        log::trace!("pushed Msg::Fetching(Fetch::WorkspaceListing)");
+                        self.fetch_workspace_listing()
+                    }
+                    Fetch::Workspace(workspace_id) => {
+                        Self::push_state(fetch, &(WorkspaceItem { id: workspace_id }).to_url());
+                        self.is_loading = true;
+                        log::trace!("pushed Msg::Fetching(Fetch::Workspace(id))");
+                        self.fetch_workspace(workspace_id)
+                    }
+                }
             }
 
             // System related
@@ -186,20 +208,19 @@ impl Application<Msg> for App {
                 log::error!("Error: {}", server_error);
                 Cmd::none()
             }
-            Msg::UrlChanged(url) => {
+            Msg::UrlChanged(fetch, url) => {
                 self.is_loading = true;
-                // log::info!("url changed to: {}", url);
-                let cmd = if let Some(_) = WorkspaceListing::from_url(&url) {
-                    self.fetch_workspace_listing()
+                match fetch {
+                    Fetch::WorkspaceListing => {
+                        self.fetch_workspace_listing()
+                    },
+                    Fetch::Workspace(workspace_id) => {
+                        self.fetch_workspace(workspace_id)
+                    },
+                    // _ => {
+                    //     Cmd::none()
+                    // },
                 }
-                else if let Some(workspace_id) = WorkspaceItem::from_url(&url) {
-                    log::trace!("fetch_workspace in WorkspaceItem::from_url");
-                    self.fetch_workspace(workspace_id)
-                }
-                else {
-                    Cmd::none()
-                };
-                cmd
             }
         }
     }
@@ -227,15 +248,15 @@ impl App {
         Self {
             content: FetchStatus::Complete(Content::from(workspace_listing)),
             is_loading: false,
-            label: format!("with_workspace_listing"),
+            fetch: Some(Fetch::WorkspaceListing),
         }
     }
 
-    pub fn with_workspace(object_info: ObjectInfo) -> Self {
+    pub fn with_workspace(workspace_id: i64, object_info: ObjectInfo) -> Self {
         Self {
             content: FetchStatus::Complete(Content::from(object_info)),
             is_loading: false,
-            label: format!("with_workspace"),
+            fetch: Some(Fetch::Workspace(workspace_id)),
         }
     }
 }
@@ -278,11 +299,11 @@ impl App {
         })
     }
 
-    fn push_state_url(url: &str) {
+    fn push_state(fetch: Fetch, url: &str) {
         let history = sauron::window().history().expect("must have history");
         log::trace!("pushing to state: {}", url);
         history
-            .push_state_with_url(&JsValue::from_str(url), "", Some(url))
+            .push_state_with_url(&JsValue::from_serde(&fetch).unwrap(), "", Some(url))
             .expect("must push state");
     }
 }
