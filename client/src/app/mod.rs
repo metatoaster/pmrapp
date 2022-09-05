@@ -125,13 +125,11 @@ impl Application<Msg> for App {
                     Resource::WorkspaceListing => {
                         Self::push_state(resource, &url);
                         self.is_loading = true;
-                        log::trace!("pushed Msg::Retrieve(Resource::WorkspaceListing)");
                         self.fetch_workspace_listing()
                     }
                     Resource::Workspace(workspace_id) => {
                         Self::push_state(resource, &url);
                         self.is_loading = true;
-                        log::trace!("pushed Msg::Retrieve(Resource::Workspace(id))");
                         self.fetch_workspace(workspace_id)
                     }
                 }
@@ -149,6 +147,7 @@ impl Application<Msg> for App {
                 Cmd::none()
             }
             Msg::UrlChanged(resource, url) => {
+                log::trace!("UrlChanged: {}", url);
                 self.is_loading = true;
                 match resource {
                     Resource::WorkspaceListing => {
@@ -217,7 +216,7 @@ impl App {
                     }
                 }
             };
-           spawn_local(async_fetch(program))
+            spawn_local(async_fetch(program))
         })
     }
 
@@ -235,7 +234,7 @@ impl App {
                     }
                 }
             };
-           spawn_local(async_fetch(program))
+            spawn_local(async_fetch(program))
         })
     }
 
