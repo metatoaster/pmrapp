@@ -26,27 +26,27 @@ pub enum FetchStatus<T> {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum Fetch {
+pub enum Resource {
     WorkspaceListing,
     Workspace(i64),
 }
 
 pub enum Msg {
-    Fetching(Fetch, String),
+    Retrieve(Resource, String),
 
     // new content and url
     ReceivedContent(Content),
     // for dealing with error responses
     RequestError(ServerError),
     // for the URL push state
-    UrlChanged(Fetch, String),
+    UrlChanged(Resource, String),
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct App {
     pub content: FetchStatus<Content>,
     is_loading: bool,
-    fetch: Option<Fetch>,
+    resource: Option<Resource>,
 }
 
 impl Default for App {
@@ -54,7 +54,7 @@ impl Default for App {
         Self {
             content: FetchStatus::Idle,
             is_loading: true,
-            fetch: None,
+            resource: None,
         }
     }
 }
@@ -65,7 +65,7 @@ impl Application<Msg> for App {
     fn init(&mut self) -> Cmd<Self, Msg> {
         // Only calling this init if this is not default, i.e. not the default app
         // created when loading failed in client/src/lib.rs main function
-        if self.fetch.is_none() {
+        if self.resource.is_none() {
             return Cmd::none();
         }
         let mut commands = vec![];
@@ -77,28 +77,18 @@ impl Application<Msg> for App {
                 .expect("must have get a pathname");
             // TODO if the state is unsupported, this blows up
             Msg::UrlChanged(
-                PopStateEvent::from(JsValue::from(e)).state().into_serde::<Fetch>().unwrap(),
+                PopStateEvent::from(JsValue::from(e)).state().into_serde::<Resource>().unwrap(),
                 url
             )
         })]);
 
         let history = sauron::window().history().expect("must have history");
-        log::trace!("setting initial state: {:#?}", self.fetch);
+        log::trace!("setting initial state: {:#?}", self.resource);
         history
-            .replace_state(&JsValue::from_serde(&Some(self.fetch.as_ref())).unwrap(), "")
+            .replace_state(&JsValue::from_serde(&Some(self.resource.as_ref())).unwrap(), "")
             .expect("must push state");
 
         commands.push(listen_to_url_changes);
-
-        /*
-        match self.content {
-            FetchStatus::Idle => {
-                // TODO figure out what are the default things to fetch??
-                commands.push(self.fetch_workspace_listing())
-            }
-            _ => (),
-        }
-        */
         Cmd::batch(commands)
     }
 
@@ -109,7 +99,7 @@ impl Application<Msg> for App {
                     <a relative href="/workspace/"
                         on_click=|e| {
                             e.prevent_default();
-                            Msg::Fetching(Fetch::WorkspaceListing, "/workspace/".to_string())
+                            Msg::Retrieve(Resource::WorkspaceListing, "/workspace/".to_string())
                         }>
                         "Workspace Listing"
                     </a>
@@ -130,18 +120,18 @@ impl Application<Msg> for App {
     fn update(&mut self, msg: Msg) -> Cmd<Self, Msg> {
         match msg {
             // core application related
-            Msg::Fetching(fetch, url) => {
-                match fetch {
-                    Fetch::WorkspaceListing => {
-                        Self::push_state(fetch, &url);
+            Msg::Retrieve(resource, url) => {
+                match resource {
+                    Resource::WorkspaceListing => {
+                        Self::push_state(resource, &url);
                         self.is_loading = true;
-                        log::trace!("pushed Msg::Fetching(Fetch::WorkspaceListing)");
+                        log::trace!("pushed Msg::Retrieve(Resource::WorkspaceListing)");
                         self.fetch_workspace_listing()
                     }
-                    Fetch::Workspace(workspace_id) => {
-                        Self::push_state(fetch, &url);
+                    Resource::Workspace(workspace_id) => {
+                        Self::push_state(resource, &url);
                         self.is_loading = true;
-                        log::trace!("pushed Msg::Fetching(Fetch::Workspace(id))");
+                        log::trace!("pushed Msg::Retrieve(Resource::Workspace(id))");
                         self.fetch_workspace(workspace_id)
                     }
                 }
@@ -158,13 +148,13 @@ impl Application<Msg> for App {
                 log::error!("Error: {}", server_error);
                 Cmd::none()
             }
-            Msg::UrlChanged(fetch, url) => {
+            Msg::UrlChanged(resource, url) => {
                 self.is_loading = true;
-                match fetch {
-                    Fetch::WorkspaceListing => {
+                match resource {
+                    Resource::WorkspaceListing => {
                         self.fetch_workspace_listing()
                     },
-                    Fetch::Workspace(workspace_id) => {
+                    Resource::Workspace(workspace_id) => {
                         self.fetch_workspace(workspace_id)
                     },
                     // _ => {
@@ -198,7 +188,7 @@ impl App {
         Self {
             content: FetchStatus::Complete(Content::from(workspace_listing)),
             is_loading: false,
-            fetch: Some(Fetch::WorkspaceListing),
+            resource: Some(Resource::WorkspaceListing),
         }
     }
 
@@ -206,7 +196,7 @@ impl App {
         Self {
             content: FetchStatus::Complete(Content::from(object_info)),
             is_loading: false,
-            fetch: Some(Fetch::Workspace(workspace_id)),
+            resource: Some(Resource::Workspace(workspace_id)),
         }
     }
 }
@@ -249,11 +239,11 @@ impl App {
         })
     }
 
-    fn push_state(fetch: Fetch, url: &str) {
+    fn push_state(resource: Resource, url: &str) {
         let history = sauron::window().history().expect("must have history");
         log::trace!("pushing to state: {}", url);
         history
-            .push_state_with_url(&JsValue::from_serde(&fetch).unwrap(), "", Some(url))
+            .push_state_with_url(&JsValue::from_serde(&resource).unwrap(), "", Some(url))
             .expect("must push state");
     }
 }
