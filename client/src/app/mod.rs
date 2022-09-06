@@ -134,29 +134,27 @@ impl Application<Msg> for App {
 
     #[cfg(feature = "wasm")]
     fn update(&mut self, msg: Msg) -> Cmd<Self, Msg> {
+        let mut update_resource = |resource: Resource| {
+            self.is_loading = true;
+            self.resource = Some(resource);
+            match resource {
+                Resource::Homepage => {
+                    self.fetch_homepage()
+                }
+                Resource::WorkspaceListing => {
+                    self.fetch_workspace_listing()
+                }
+                Resource::Workspace(workspace_id) => {
+                    self.fetch_workspace(workspace_id)
+                }
+            }
+        };
+
         match msg {
             // core application related
             Msg::Retrieve(resource, url) => {
-                match resource {
-                    Resource::Homepage => {
-                        self.resource = Some(resource);
-                        Self::push_state(resource, &url);
-                        self.is_loading = true;
-                        self.fetch_homepage()
-                    }
-                    Resource::WorkspaceListing => {
-                        self.resource = Some(resource);
-                        Self::push_state(resource, &url);
-                        self.is_loading = true;
-                        self.fetch_workspace_listing()
-                    }
-                    Resource::Workspace(workspace_id) => {
-                        self.resource = Some(resource);
-                        Self::push_state(resource, &url);
-                        self.is_loading = true;
-                        self.fetch_workspace(workspace_id)
-                    }
-                }
+                Self::push_state(&resource, &url);
+                update_resource(resource)
             }
 
             // System related
@@ -172,24 +170,7 @@ impl Application<Msg> for App {
             }
             Msg::UrlChanged(resource, url) => {
                 log::trace!("UrlChanged: {}", url);
-                self.is_loading = true;
-                match resource {
-                    Resource::Homepage => {
-                        self.resource = Some(resource);
-                        self.fetch_homepage()
-                    },
-                    Resource::WorkspaceListing => {
-                        self.resource = Some(resource);
-                        self.fetch_workspace_listing()
-                    },
-                    Resource::Workspace(workspace_id) => {
-                        self.resource = Some(resource);
-                        self.fetch_workspace(workspace_id)
-                    },
-                    // _ => {
-                    //     Cmd::none()
-                    // },
-                }
+                update_resource(resource)
             }
         }
     }
@@ -282,7 +263,7 @@ impl App {
         })
     }
 
-    fn push_state(resource: Resource, url: &str) {
+    fn push_state(resource: &Resource, url: &str) {
         let history = sauron::window().history().expect("must have history");
         log::trace!("pushing to state: {}", url);
         history
