@@ -44,9 +44,9 @@ async fn render_workspace(
     path: Path<i64>,
 ) -> Response {
     let workspace_id = path.0;
-    match api::workspace::api_workspace_top(ctx, path).await {
-        Ok(Json(record)) => {
-            let app = App::with_workspace_top(workspace_id, record, None);
+    match api::workspace::api_workspace_top_ssr(ctx, path).await {
+        Ok((record, object_info)) => {
+            let app = App::with_workspace_top(workspace_id, record, object_info);
             let content = page::index(&app).render_to_string();
             Html(content).into_response()
         },

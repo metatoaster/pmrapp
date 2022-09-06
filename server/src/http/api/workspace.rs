@@ -65,6 +65,42 @@ pub async fn api_workspace_top(
     }
 }
 
+pub async fn api_workspace_top_ssr(
+    ctx: Extension<AppContext>,
+    Path(workspace_id): Path<i64>,
+) -> Result<(JsonWorkspaceRecord, Option<ObjectInfo>)> {
+    let workspace = match WorkspaceBackend::get_workspace_by_id(&ctx.backend, workspace_id).await {
+        Ok(workspace) => workspace,
+        Err(_) => return Err(Error::NotFound),
+    };
+    let git_pmr_accessor = GitPmrAccessor::new(
+        &ctx.backend,
+        PathBuf::from(&ctx.config.pmr_git_root),
+        workspace
+    );
+
+    match git_pmr_accessor.process_pathinfo(
+        None,
+        None,
+        |result| { (format!("{}", result.commit.id()), <Option<ObjectInfo>>::from(result)) }
+    ).await {
+        Ok((commit_id, object_info)) => Ok((
+            JsonWorkspaceRecord {
+                workspace: git_pmr_accessor.workspace,
+                head_commit: Some(commit_id),
+            },
+            object_info,
+        )),
+        Err(_) => Ok((
+            JsonWorkspaceRecord {
+                workspace: git_pmr_accessor.workspace,
+                head_commit: None,
+            },
+            None,
+        )),
+    }
+}
+
 async fn api_workspace_pathinfo(
     ctx: Extension<AppContext>,
     workspace_id: i64,
