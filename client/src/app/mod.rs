@@ -16,6 +16,7 @@ mod content;
 use content::Content;
 use crate::error::ServerError;
 use crate::api;
+use crate::model::JsonWorkspaceRecord;
 
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -29,7 +30,7 @@ pub enum FetchStatus<T> {
 pub enum Resource {
     Homepage,
     WorkspaceListing,
-    Workspace(i64),
+    WorkspaceTop(i64),
 }
 
 pub enum Msg {
@@ -110,7 +111,7 @@ impl Application<Msg> for App {
                     </a>
                     <a relative href="/workspace/"
                         class={ match self.resource {
-                            Some(Resource::WorkspaceListing) | Some(Resource::Workspace(_)) => "active",
+                            Some(Resource::WorkspaceListing) | Some(Resource::WorkspaceTop(_)) => "active",
                             _ => ""
                         } }
                         on_click=|e| {
@@ -145,7 +146,7 @@ impl Application<Msg> for App {
                 Resource::WorkspaceListing => {
                     self.fetch_workspace_listing()
                 }
-                Resource::Workspace(workspace_id) => {
+                Resource::WorkspaceTop(workspace_id) => {
                     self.fetch_workspace(workspace_id)
                 }
             }
@@ -223,11 +224,15 @@ impl App {
         }
     }
 
-    pub fn with_workspace(workspace_id: i64, object_info: ObjectInfo) -> Self {
+    pub fn with_workspace_top(
+        workspace_id: i64,
+        record: JsonWorkspaceRecord,
+        object_info: Option<ObjectInfo>,
+    ) -> Self {
         Self {
-            content: FetchStatus::Complete(Content::from(object_info)),
+            content: FetchStatus::Complete(Content::from((record, object_info))),
             is_loading: false,
-            resource: Some(Resource::Workspace(workspace_id)),
+            resource: Some(Resource::WorkspaceTop(workspace_id)),
         }
     }
 }
@@ -261,11 +266,36 @@ impl App {
     fn fetch_workspace(&self, workspace_id: i64) -> Cmd<Self, Msg> {
         Cmd::new(move|program| {
             let async_fetch = |program:Program<Self,Msg>| async move{
-                match api::get_workspace(workspace_id).await {
-                    Ok(object_info) => {
-                        program.dispatch(Msg::ReceivedContent( Content::from(
-                            object_info,
-                        )));
+                match api::get_workspace_top(&workspace_id).await {
+                    Ok(json_workspace_record) => {
+                        match json_workspace_record.head_commit {
+                            Some(_) => {
+                                let async_fetch = |program:Program<Self, Msg>| async move {
+                                    match api::get_workspace_pathinfo(
+                                        &workspace_id,
+                                        // have to unwrap here.
+                                        &json_workspace_record.head_commit.as_ref().unwrap(),
+                                    ).await {
+                                        Ok(object_info) => {
+                                            program.dispatch(Msg::ReceivedContent( Content::from(
+                                                (json_workspace_record, Some(object_info))
+                                            )));
+                                        }
+                                        Err(_) => {
+                                            program.dispatch(Msg::ReceivedContent( Content::from(
+                                                (json_workspace_record, None)
+                                            )));
+                                        }
+                                    }
+                                };
+                                spawn_local(async_fetch(program))
+                            }
+                            None => {
+                                program.dispatch(Msg::ReceivedContent( Content::from(
+                                    (json_workspace_record, None)
+                                )));
+                            }
+                        }
                     }
                     Err(e) => {
                         program.dispatch(Msg::RequestError(e));

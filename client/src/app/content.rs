@@ -10,6 +10,7 @@ use pmrmodel_base::{
     git::ObjectInfo,
 };
 
+use crate::model::JsonWorkspaceRecord;
 use crate::app::Resource;
 use crate::app::Msg;
 
@@ -19,7 +20,7 @@ use crate::app::Msg;
 pub enum Content {
     Homepage,
     WorkspaceListing(JsonWorkspaceRecords),
-    Workspace(ObjectInfo),
+    WorkspaceTop(JsonWorkspaceRecord, Option<ObjectInfo>),
 }
 
 
@@ -56,12 +57,13 @@ impl Content {
                     </div>
                 }
             },
-            Content::Workspace(record) => {
+            Content::WorkspaceTop(workspace_record, object_info) => {
                 node! {
                     <div class="main">
                         <h1>"Workspace"</h1>
                         <div class="workspace-objectinfo">
-                            <div>{ text!("{:?}", record) }</div>
+                            <div>{ text!("{:?}", workspace_record) }</div>
+                            <div>{ text!("{:?}", object_info) }</div>
                         </div>
                     </div>
                 }
@@ -78,7 +80,7 @@ impl Content {
                     href=format!("/workspace/{}/", workspace_id)
                     on_click=move |e| {
                         e.prevent_default();
-                        Msg::Retrieve(Resource::Workspace(workspace_id), format!("/workspace/{}/", workspace_id))
+                        Msg::Retrieve(Resource::WorkspaceTop(workspace_id), format!("/workspace/{}/", workspace_id))
                     }
                 >{ text!("Workspace: {}", workspace_id) }
                 </a></div>

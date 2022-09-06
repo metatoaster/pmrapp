@@ -10,6 +10,7 @@ use pmrmodel_base::git::ObjectInfo;
 use pmrmodel_base::workspace::JsonWorkspaceRecords;
 use std::path::PathBuf;
 
+use client::model::JsonWorkspaceRecord;
 use crate::http::AppContext;
 use crate::http::{Error, Result};
 
@@ -23,7 +24,7 @@ pub fn router() -> Router {
     Router::new()
         .route("/", get(api_workspace))
         .route(":workspace_id/",
-            get(api_workspace_pathinfo_workspace_id))
+            get(api_workspace_top))
         .route(":workspace_id/file/",
             get(api_workspace_pathinfo_workspace_id))
         .route(":workspace_id/file/:commit_id/*path",
@@ -33,6 +34,35 @@ pub fn router() -> Router {
 pub async fn api_workspace(ctx: Extension<AppContext>) -> Result<Json<JsonWorkspaceRecords>> {
     let records = WorkspaceBackend::list_workspaces(&ctx.backend).await?;
     Ok(Json(JsonWorkspaceRecords { workspaces: records }))
+}
+
+pub async fn api_workspace_top(
+    ctx: Extension<AppContext>,
+    Path(workspace_id): Path<i64>,
+) -> Result<Json<JsonWorkspaceRecord>> {
+    let workspace = match WorkspaceBackend::get_workspace_by_id(&ctx.backend, workspace_id).await {
+        Ok(workspace) => workspace,
+        Err(_) => return Err(Error::NotFound),
+    };
+    let git_pmr_accessor = GitPmrAccessor::new(
+        &ctx.backend,
+        PathBuf::from(&ctx.config.pmr_git_root),
+        workspace
+    );
+    match git_pmr_accessor.process_pathinfo(
+        None,
+        None,
+        |result| { format!("{}", result.commit.id()) }
+    ).await {
+        Ok(commit_id) => Ok(Json(JsonWorkspaceRecord {
+            workspace: git_pmr_accessor.workspace,
+            head_commit: Some(commit_id),
+        })),
+        Err(_) => Ok(Json(JsonWorkspaceRecord {
+            workspace: git_pmr_accessor.workspace,
+            head_commit: None,
+        })),
+    }
 }
 
 async fn api_workspace_pathinfo(
@@ -78,7 +108,15 @@ pub async fn api_workspace_pathinfo_workspace_id(
     api_workspace_pathinfo(ctx, workspace_id, None, None).await
 }
 
-async fn api_workspace_pathinfo_workspace_id_commit_id_path(
+pub async fn api_workspace_pathinfo_workspace_id_commit_id(
+    ctx: Extension<AppContext>,
+    Path((workspace_id, commit_id)): Path<(i64, Option<String>)>,
+) -> Result<Json<ObjectInfo>> {
+    api_workspace_pathinfo(ctx, workspace_id, commit_id, None).await
+}
+
+
+pub async fn api_workspace_pathinfo_workspace_id_commit_id_path(
     ctx: Extension<AppContext>,
     Path((workspace_id, commit_id, path)): Path<(i64, Option<String>, Option<String>)>,
 ) -> Result<Json<ObjectInfo>> {
