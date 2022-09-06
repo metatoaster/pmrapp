@@ -25,7 +25,7 @@ pub enum FetchStatus<T> {
     Error(String),
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
 pub enum Resource {
     Homepage,
     WorkspaceListing,
@@ -98,6 +98,10 @@ impl Application<Msg> for App {
             <body class="main">
                 <header>
                     <a relative href="/"
+                        class={ match self.resource {
+                            Some(Resource::Homepage) => "active",
+                            _ => ""
+                        } }
                         on_click=|e| {
                             e.prevent_default();
                             Msg::Retrieve(Resource::Homepage, "/".to_string())
@@ -105,6 +109,10 @@ impl Application<Msg> for App {
                         "Home"
                     </a>
                     <a relative href="/workspace/"
+                        class={ match self.resource {
+                            Some(Resource::WorkspaceListing) | Some(Resource::Workspace(_)) => "active",
+                            _ => ""
+                        } }
                         on_click=|e| {
                             e.prevent_default();
                             Msg::Retrieve(Resource::WorkspaceListing, "/workspace/".to_string())
@@ -131,16 +139,19 @@ impl Application<Msg> for App {
             Msg::Retrieve(resource, url) => {
                 match resource {
                     Resource::Homepage => {
+                        self.resource = Some(resource);
                         Self::push_state(resource, &url);
                         self.is_loading = true;
                         self.fetch_homepage()
                     }
                     Resource::WorkspaceListing => {
+                        self.resource = Some(resource);
                         Self::push_state(resource, &url);
                         self.is_loading = true;
                         self.fetch_workspace_listing()
                     }
                     Resource::Workspace(workspace_id) => {
+                        self.resource = Some(resource);
                         Self::push_state(resource, &url);
                         self.is_loading = true;
                         self.fetch_workspace(workspace_id)
@@ -164,12 +175,15 @@ impl Application<Msg> for App {
                 self.is_loading = true;
                 match resource {
                     Resource::Homepage => {
+                        self.resource = Some(resource);
                         self.fetch_homepage()
                     },
                     Resource::WorkspaceListing => {
+                        self.resource = Some(resource);
                         self.fetch_workspace_listing()
                     },
                     Resource::Workspace(workspace_id) => {
+                        self.resource = Some(resource);
                         self.fetch_workspace(workspace_id)
                     },
                     // _ => {

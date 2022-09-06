@@ -28,7 +28,7 @@ impl Content {
         match self {
             Content::Homepage => {
                 node! {
-                    <div class="index">
+                    <div class="main">
                         <h1>"Physiome Model Repository"</h1>
                         <p>"Welcome to the Physiome Model Repository"</p>
                         <dl>
@@ -44,19 +44,25 @@ impl Content {
             }
             Content::WorkspaceListing(records) => {
                 node! {
-                    <div class="workspace-listing">
-                    {
-                        for record in &records.workspaces {
-                            self.show_workspace_record_row(record)
+                    <div class="main">
+                        <h1>"Workspace Listing"</h1>
+                        <div class="workspace-listing">
+                        {
+                            for record in &records.workspaces {
+                                self.show_workspace_record_row(record)
+                            }
                         }
-                    }
+                        </div>
                     </div>
                 }
             },
             Content::Workspace(record) => {
                 node! {
-                    <div class="workspace-objectinfo">
-                        <div>{ text!("{:?}", record) }</div>
+                    <div class="main">
+                        <h1>"Workspace"</h1>
+                        <div class="workspace-objectinfo">
+                            <div>{ text!("{:?}", record) }</div>
+                        </div>
                     </div>
                 }
             }

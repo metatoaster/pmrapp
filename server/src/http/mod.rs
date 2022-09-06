@@ -73,6 +73,7 @@ fn router() -> Router {
     Router::new()
         .route("/", get(index_root))
         .route("/api/", get(api_root))
+        .route("/style/main.css", get(style_main))
         .route("/pkg/client.js", get(client_js))
         .route("/pkg/client_bg.wasm", get(client_bg_wasm))
 }
@@ -92,6 +93,13 @@ struct Page {
 async fn api_root() -> Response {
     let resp = Page { name: "index".to_string() };
     Json(resp).into_response()
+}
+
+async fn style_main() -> (HeaderMap, String) {
+    let mut headers = HeaderMap::new();
+    headers.insert(HeaderName::from_static("content-type"),
+        HeaderValue::from_static("text/css"));
+    (headers, page::style())
 }
 
 async fn client_js() -> (HeaderMap, String) {
