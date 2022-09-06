@@ -49,5 +49,21 @@ pub fn style() -> String {
         "header a.active": {
             background_color: "#c00",
         },
+        "#indicator, #indicator div": {
+            height: "10px",
+        },
+        "#indicator div.loading": {
+            background: "repeating-linear-gradient(-45deg, #c00 0, #c00 33%, #333 0, #333 66%)",
+            background_size: "20px",
+            animation: "loading_indicator 1s infinite linear",
+        },
+        "@keyframes loading_indicator": {
+            from: {
+                background_position: "0px 0px",
+            },
+            to: {
+                background_position: "-40px 0px",
+            }
+        }
     }
 }

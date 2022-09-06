@@ -120,6 +120,7 @@ impl Application<Msg> for App {
                         "Workspace Listing"
                     </a>
                 </header>
+                { self.loading_indicator() }
                 <main class="content">
                     { self.view_content() }
                 </main>
@@ -189,6 +190,18 @@ impl App {
                 }
             }
             FetchStatus::Complete(content) => content.view(),
+        }
+    }
+
+    fn loading_indicator(&self) -> Node<Msg> {
+        node! {
+            <div id="indicator">
+                <div class={ if self.is_loading {
+                    "loading"
+                } else {
+                    "loaded"
+                } }></div>
+            </div>
         }
     }
 }
