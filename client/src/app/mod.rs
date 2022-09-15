@@ -3,7 +3,7 @@ use pmrmodel_base::{
         JsonWorkspaceRecords,
         // WorkspaceRecord,
     },
-    git::ObjectInfo,
+    git::PathInfo,
 };
 use sauron::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -227,7 +227,7 @@ impl App {
     pub fn with_workspace_top(
         workspace_id: i64,
         record: JsonWorkspaceRecord,
-        object_info: Option<ObjectInfo>,
+        object_info: Option<PathInfo>,
     ) -> Self {
         Self {
             content: FetchStatus::Complete(Content::from((record, object_info))),

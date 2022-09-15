@@ -7,7 +7,11 @@ use pmrmodel_base::{
         JsonWorkspaceRecords,
         WorkspaceRecord,
     },
-    git::ObjectInfo,
+    git::{
+        PathInfo,
+        PathObject,
+        TreeEntryInfo,
+    },
 };
 
 use crate::model::JsonWorkspaceRecord;
@@ -20,7 +24,7 @@ use crate::app::Msg;
 pub enum Content {
     Homepage,
     WorkspaceListing(JsonWorkspaceRecords),
-    WorkspaceTop(JsonWorkspaceRecord, Option<ObjectInfo>),
+    WorkspaceTop(JsonWorkspaceRecord, Option<PathInfo>),
 }
 
 
@@ -57,13 +61,19 @@ impl Content {
                     </div>
                 }
             },
-            Content::WorkspaceTop(workspace_record, object_info) => {
+            Content::WorkspaceTop(workspace_record, path_info) => {
                 node! {
                     <div class="main">
-                        <h1>"Workspace"</h1>
-                        <div class="workspace-objectinfo">
-                            <div>{ text!("{:?}", workspace_record) }</div>
-                            <div>{ text!("{:?}", object_info) }</div>
+                        <h1>{ text!("{}", &workspace_record.workspace.description.as_ref().unwrap_or(
+                            &format!("Workspace {}", &workspace_record.workspace.id))) }</h1>
+                        <dl>
+                            <dt>"Git Repository URI"</dt>
+                            <dd>{ text!("{}", &workspace_record.workspace.url) }</dd>
+                        </dl>
+                        <div class="workspace-pathinfo">
+                        {
+                            self.show_workspace_file_table(&path_info)
+                        }
                         </div>
                     </div>
                 }
@@ -89,4 +99,54 @@ impl Content {
             </div>
         }
     }
+
+    fn show_workspace_file_table(&self, path_info: &Option<PathInfo>) -> Node<app::Msg> {
+        node! {
+            <table>
+                <thead>
+                    <tr>
+                        <th>"Filename"</th>
+                        <th>"Size"</th>
+                        <th>"Date"</th>
+                    </tr>
+                </thead>
+                {
+                    match path_info {
+                        Some(path_info) => {
+                            match &path_info.object {
+                                Some(PathObject::TreeInfo(tree_info)) => {
+                                    node! { <tbody> {
+                                        for info in tree_info.entries.iter() {
+                                            self.show_workspace_file_row(
+                                                &path_info.commit.commit_id,
+                                                &path_info.path,
+                                                info,
+                                            )
+                                        }
+                                    } </tbody> }
+                                },
+                                _ => node! {},
+                            }
+                        }
+                        None => node! {},
+                    }
+                }
+            </table>
+        }
+    }
+
+    fn show_workspace_file_row(&self, commit_id: &str, path: &str, info: &TreeEntryInfo) -> Node<app::Msg> {
+        node! {
+            <tr>
+                <td class=format!("gitobj-{}", info.kind)><a
+                    href=format!("file/{}/{}/{}", commit_id, path, info.name)>{
+                        text!("{}", info.name)
+                    }</a>
+                </td>
+                <td></td>
+                <td></td>
+            </tr>
+        }
+    }
+
 }
