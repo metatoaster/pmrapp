@@ -37,7 +37,7 @@ pub enum Msg {
     Retrieve(Resource, String),
 
     // new content and url
-    ReceivedContent(Content),
+    ReceivedContent(Resource, Content),
     // for dealing with error responses
     RequestError(ServerError),
     // for the URL push state
@@ -141,13 +141,13 @@ impl Application<Msg> for App {
             self.resource = Some(resource);
             match resource {
                 Resource::Homepage => {
-                    self.fetch_homepage()
+                    self.fetch_homepage(resource)
                 }
                 Resource::WorkspaceListing => {
-                    self.fetch_workspace_listing()
+                    self.fetch_workspace_listing(resource)
                 }
                 Resource::WorkspaceTop(workspace_id) => {
-                    self.fetch_workspace(workspace_id)
+                    self.fetch_workspace(resource, workspace_id)
                 }
             }
         };
@@ -160,10 +160,17 @@ impl Application<Msg> for App {
             }
 
             // System related
-            Msg::ReceivedContent(content) => {
-                self.content = FetchStatus::Complete(content);
-                self.is_loading = false;
-                Window::scroll_to_top()
+            Msg::ReceivedContent(resource, content) => {
+                if Some(resource) == self.resource {
+                    self.content = FetchStatus::Complete(content);
+                    self.is_loading = false;
+                    Window::scroll_to_top()
+                }
+                else {
+                    log::warn!("fetched resource not match current resource; doing nothing");
+                    self.is_loading = false;
+                    Cmd::none()
+                }
             }
             Msg::RequestError(server_error) => {
                 self.is_loading = false;
@@ -239,18 +246,18 @@ impl App {
 
 #[cfg(feature = "wasm")]
 impl App {
-    fn fetch_homepage(&self) -> Cmd<Self, Msg> {
+    fn fetch_homepage(&self, resource: Resource) -> Cmd<Self, Msg> {
         Cmd::new(move|program| {
-            program.dispatch(Msg::ReceivedContent(Content::Homepage));
+            program.dispatch(Msg::ReceivedContent(resource, Content::Homepage));
         })
     }
 
-    fn fetch_workspace_listing(&self) -> Cmd<Self, Msg> {
+    fn fetch_workspace_listing(&self, resource: Resource) -> Cmd<Self, Msg> {
         Cmd::new(move|program| {
             let async_fetch = |program:Program<Self,Msg>| async move{
                 match api::get_workspace_listing().await {
                     Ok(workspace_records) => {
-                        program.dispatch(Msg::ReceivedContent( Content::from(
+                        program.dispatch(Msg::ReceivedContent(resource, Content::from(
                             workspace_records,
                         )));
                     }
@@ -263,7 +270,7 @@ impl App {
         })
     }
 
-    fn fetch_workspace(&self, workspace_id: i64) -> Cmd<Self, Msg> {
+    fn fetch_workspace(&self, resource: Resource, workspace_id: i64) -> Cmd<Self, Msg> {
         Cmd::new(move|program| {
             let async_fetch = |program:Program<Self,Msg>| async move{
                 match api::get_workspace_top(&workspace_id).await {
@@ -277,12 +284,12 @@ impl App {
                                         &json_workspace_record.head_commit.as_ref().unwrap(),
                                     ).await {
                                         Ok(object_info) => {
-                                            program.dispatch(Msg::ReceivedContent( Content::from(
+                                            program.dispatch(Msg::ReceivedContent(resource, Content::from(
                                                 (json_workspace_record, Some(object_info))
                                             )));
                                         }
                                         Err(_) => {
-                                            program.dispatch(Msg::ReceivedContent( Content::from(
+                                            program.dispatch(Msg::ReceivedContent(resource, Content::from(
                                                 (json_workspace_record, None)
                                             )));
                                         }
@@ -291,7 +298,7 @@ impl App {
                                 spawn_local(async_fetch(program))
                             }
                             None => {
-                                program.dispatch(Msg::ReceivedContent( Content::from(
+                                program.dispatch(Msg::ReceivedContent(resource, Content::from(
                                     (json_workspace_record, None)
                                 )));
                             }
