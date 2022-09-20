@@ -78,16 +78,19 @@ impl Application<Msg> for App {
                 .pathname()
                 .expect("must have get a pathname");
             // TODO if the state is unsupported, this blows up
+            // TODO rather than unwrap, if error, trigger a redirect to url
             Msg::UrlChanged(
-                PopStateEvent::from(JsValue::from(e)).state().into_serde::<Resource>().unwrap(),
-                url
+                serde_wasm_bindgen::from_value(
+                    PopStateEvent::from(JsValue::from(e)).state()
+                ).unwrap(),
+                url,
             )
         })]);
 
         let history = sauron::window().history().expect("must have history");
         log::trace!("setting initial state: {:#?}", self.resource);
         history
-            .replace_state(&JsValue::from_serde(&Some(self.resource.as_ref())).unwrap(), "")
+            .replace_state(&serde_wasm_bindgen::to_value(&Some(self.resource.as_ref())).unwrap(), "")
             .expect("must push state");
 
         commands.push(listen_to_url_changes);
@@ -317,7 +320,7 @@ impl App {
         let history = sauron::window().history().expect("must have history");
         log::trace!("pushing to state: {}", url);
         history
-            .push_state_with_url(&JsValue::from_serde(&resource).unwrap(), "", Some(url))
+            .push_state_with_url(&serde_wasm_bindgen::to_value(&resource).unwrap(), "", Some(url))
             .expect("must push state");
     }
 }
