@@ -7,7 +7,7 @@ license = "AGPL-3.0"
 
 [dependencies]
 anyhow = "1.0"
-axum = "0.4.8"
+axum = "0.6.0-rc.2"
 clap = { version = "3.2", features = [ "derive", "env" ] }
 client = { path = "../client", default-features = false }
 dotenv = "0.15.0"

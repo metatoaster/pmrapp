@@ -18,14 +18,9 @@ use client::sauron::Render;
 
 
 pub fn router() -> Router {
-    // XXX this is done so because we want trailing / via nest
-    // See: https://github.com/tokio-rs/axum/issues/714
-    // See: https://github.com/tokio-rs/axum/pull/824
-    // Note comment about how routes should be working standalone
-    // FIXME by axum-0.6
     Router::new()
         .route("/", get(render_workspace_listing))
-        .route(":workspace_id/", get(render_workspace))
+        .route("/:workspace_id/", get(render_workspace))
 }
 
 async fn render_workspace_listing(ctx: Extension<AppContext>) -> Response {
