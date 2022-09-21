@@ -155,6 +155,9 @@ impl Application<Msg> for App {
                 Resource::WorkspaceTop(workspace_id) => {
                     self.fetch_workspace(resource, workspace_id)
                 }
+                Resource::WorkspacePathInfo(workspace_id, ref commit_id, ref path) => {
+                    self.fetch_workspace(resource, workspace_id)
+                }
                 Resource::Unset => {
                     Cmd::none()
                 }
@@ -251,6 +254,19 @@ impl App {
             resource: Resource::WorkspaceTop(workspace_id),
         }
     }
+
+    pub fn with_workspace_pathinfo(
+        workspace_id: i64,
+        commit_id: String,
+        filepath: String,
+        object_info: PathInfo,
+    ) -> Self {
+        Self {
+            content: FetchStatus::Complete(Content::from(object_info)),
+            is_loading: false,
+            resource: Resource::WorkspacePathInfo(workspace_id, commit_id, filepath),
+        }
+    }
 }
 
 #[cfg(feature = "wasm")]
@@ -291,6 +307,7 @@ impl App {
                                         &workspace_id,
                                         // have to unwrap here.
                                         &json_workspace_record.head_commit.as_ref().unwrap(),
+                                        None,
                                     ).await {
                                         Ok(object_info) => {
                                             program.dispatch(Msg::ReceivedContent(resource, Content::from(
@@ -312,6 +329,34 @@ impl App {
                                 )));
                             }
                         }
+                    }
+                    Err(e) => {
+                        program.dispatch(Msg::RequestError(e));
+                    }
+                }
+            };
+            spawn_local(async_fetch(program))
+        })
+    }
+
+    fn fetch_workspace_pathinfo(
+        &self,
+        resource: Resource,
+        workspace_id: i64,
+        commit_id: String,
+        path: String,
+    ) -> Cmd<Self, Msg> {
+        Cmd::new(move|program| {
+            let async_fetch = |program:Program<Self,Msg>| async move{
+                match api::get_workspace_pathinfo(
+                    &workspace_id,
+                    &commit_id,
+                    Some(&path),
+                ).await {
+                    Ok(workspace_records) => {
+                        program.dispatch(Msg::ReceivedContent(resource, Content::from(
+                            workspace_records,
+                        )));
                     }
                     Err(e) => {
                         program.dispatch(Msg::RequestError(e));

@@ -25,6 +25,7 @@ pub enum Content {
     Homepage,
     WorkspaceListing(JsonWorkspaceRecords),
     WorkspaceTop(JsonWorkspaceRecord, Option<PathInfo>),
+    WorkspacePathInfo(PathInfo),
 }
 
 
@@ -77,7 +78,16 @@ impl Content {
                         </div>
                     </div>
                 }
-            }
+            },
+            Content::WorkspacePathInfo(path_info) => {
+                node! {
+                    <div class="main">
+                        <div class="workspace-pathinfo">
+                        { text!("{:?}", path_info) }
+                        </div>
+                    </div>
+                }
+            },
         }
     }
 

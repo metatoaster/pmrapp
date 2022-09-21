@@ -24,7 +24,12 @@ pub async fn get_workspace_top(workspace_id: &i64) -> Result<JsonWorkspaceRecord
     Ok(request_get_json::<JsonWorkspaceRecord>(&url).await?)
 }
 
-pub async fn get_workspace_pathinfo(workspace_id: &i64, commit_id: &str) -> Result<PathInfo, ServerError> {
-    let url = format!("{}/api/workspace/{}/file/{}/", sauron::window().location().origin().expect("must have location"), workspace_id, commit_id);
+pub async fn get_workspace_pathinfo(workspace_id: &i64, commit_id: &str, path: Option<&str>) -> Result<PathInfo, ServerError> {
+    let url = format!("{}/api/workspace/{}/file/{}/{}",
+        sauron::window().location().origin().expect("must have location"),
+        workspace_id,
+        commit_id,
+        path.unwrap_or(""),
+    );
     Ok(request_get_json::<PathInfo>(&url).await?)
 }

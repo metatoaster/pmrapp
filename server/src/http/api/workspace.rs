@@ -137,16 +137,16 @@ pub async fn api_workspace_pathinfo_workspace_id(
 
 pub async fn api_workspace_pathinfo_workspace_id_commit_id(
     ctx: Extension<AppContext>,
-    Path((workspace_id, commit_id)): Path<(i64, Option<String>)>,
+    Path((workspace_id, commit_id)): Path<(i64, String)>,
 ) -> Result<Json<PathInfo>> {
-    api_workspace_pathinfo(ctx, workspace_id, commit_id, None).await
+    api_workspace_pathinfo(ctx, workspace_id, Some(commit_id), None).await
 }
 
 
 pub async fn api_workspace_pathinfo_workspace_id_commit_id_path(
     ctx: Extension<AppContext>,
-    Path((workspace_id, commit_id, path)): Path<(i64, Option<String>, Option<String>)>,
+    Path((workspace_id, commit_id, path)): Path<(i64, String, String)>,
 ) -> Result<Json<PathInfo>> {
-    api_workspace_pathinfo(ctx, workspace_id, commit_id, path).await
+    api_workspace_pathinfo(ctx, workspace_id, Some(commit_id), Some(path)).await
 }
 
