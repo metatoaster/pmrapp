@@ -102,7 +102,7 @@ impl Content {
 
     fn show_workspace_file_table(&self, path_info: &Option<PathInfo>) -> Node<app::Msg> {
         node! {
-            <table>
+            <table class="file-listing">
                 <thead>
                     <tr>
                         <th>"Filename"</th>
@@ -138,10 +138,16 @@ impl Content {
     fn show_workspace_file_row(&self, commit_id: &str, path: &str, info: &TreeEntryInfo) -> Node<app::Msg> {
         node! {
             <tr>
-                <td class=format!("gitobj-{}", info.kind)><a
-                    href=format!("file/{}/{}/{}", commit_id, path, info.name)>{
-                        text!("{}", info.name)
-                    }</a>
+                <td class=format!("gitobj-{}", info.kind)><span><a
+                    href=format!("file/{}/{}{}",
+                        commit_id,
+                        path,
+                        if info.kind == "tree" {
+                            format!("{}/", info.name)
+                        } else {
+                            format!("{}", info.name)
+                        },
+                    )>{ text!("{}", info.name) }</a></span>
                 </td>
                 <td></td>
                 <td></td>

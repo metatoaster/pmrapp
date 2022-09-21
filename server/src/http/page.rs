@@ -49,6 +49,15 @@ pub fn style() -> String {
         "header a.active": {
             background_color: "#c00",
         },
+        "table.file-listing": {
+            width: "100%",
+        },
+        "table.file-listing td.gitobj-tree span::before": {
+            content: "'\\1f4c1 '",
+        },
+        "table.file-listing td.gitobj-blob span::before": {
+            content: "'\\1f4c4 '",
+        },
         "#indicator, #indicator div": {
             height: "10px",
         },
@@ -64,6 +73,6 @@ pub fn style() -> String {
             to: {
                 background_position: "-40px 0px",
             }
-        }
+        },
     }
 }
