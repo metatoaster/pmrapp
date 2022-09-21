@@ -26,11 +26,14 @@ pub enum FetchStatus<T> {
     Error(String),
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum Resource {
+    Unset,
+
     Homepage,
     WorkspaceListing,
     WorkspaceTop(i64),
+    WorkspacePathInfo(i64, String, String),
 }
 
 pub enum Msg {
@@ -48,7 +51,7 @@ pub enum Msg {
 pub struct App {
     pub content: FetchStatus<Content>,
     is_loading: bool,
-    resource: Option<Resource>,
+    resource: Resource,
 }
 
 impl Default for App {
@@ -56,7 +59,7 @@ impl Default for App {
         Self {
             content: FetchStatus::Idle,
             is_loading: true,
-            resource: None,
+            resource: Resource::Unset,
         }
     }
 }
@@ -67,7 +70,7 @@ impl Application<Msg> for App {
     fn init(&mut self) -> Cmd<Self, Msg> {
         // Only calling this init if this is not default, i.e. not the default app
         // created when loading failed in client/src/lib.rs main function
-        if self.resource.is_none() {
+        if self.resource == Resource::Unset {
             return Cmd::none();
         }
         let mut commands = vec![];
@@ -90,7 +93,7 @@ impl Application<Msg> for App {
         let history = sauron::window().history().expect("must have history");
         log::trace!("setting initial state: {:#?}", self.resource);
         history
-            .replace_state(&serde_wasm_bindgen::to_value(&Some(self.resource.as_ref())).unwrap(), "")
+            .replace_state(&serde_wasm_bindgen::to_value(&self.resource).unwrap(), "")
             .expect("must push state");
 
         commands.push(listen_to_url_changes);
@@ -103,7 +106,7 @@ impl Application<Msg> for App {
                 <header>
                     <a relative href="/"
                         class={ match self.resource {
-                            Some(Resource::Homepage) => "active",
+                            Resource::Homepage => "active",
                             _ => ""
                         } }
                         on_click=|e| {
@@ -114,7 +117,7 @@ impl Application<Msg> for App {
                     </a>
                     <a relative href="/workspace/"
                         class={ match self.resource {
-                            Some(Resource::WorkspaceListing) | Some(Resource::WorkspaceTop(_)) => "active",
+                            Resource::WorkspaceListing | Resource::WorkspaceTop(_) => "active",
                             _ => ""
                         } }
                         on_click=|e| {
@@ -141,7 +144,7 @@ impl Application<Msg> for App {
     fn update(&mut self, msg: Msg) -> Cmd<Self, Msg> {
         let mut update_resource = |resource: Resource| {
             self.is_loading = true;
-            self.resource = Some(resource);
+            self.resource = resource.clone();
             match resource {
                 Resource::Homepage => {
                     self.fetch_homepage(resource)
@@ -151,6 +154,9 @@ impl Application<Msg> for App {
                 }
                 Resource::WorkspaceTop(workspace_id) => {
                     self.fetch_workspace(resource, workspace_id)
+                }
+                Resource::Unset => {
+                    Cmd::none()
                 }
             }
         };
@@ -164,14 +170,14 @@ impl Application<Msg> for App {
 
             // System related
             Msg::ReceivedContent(resource, content) => {
-                if Some(resource) == self.resource {
+                if resource == self.resource {
                     self.content = FetchStatus::Complete(content);
                     self.is_loading = false;
+                    log::trace!("content prepared for resource {:?}", &resource);
                     Window::scroll_to_top()
                 }
                 else {
-                    log::warn!("fetched resource not match current resource; doing nothing");
-                    self.is_loading = false;
+                    log::warn!("fetched resource {:?} not match current resource {:?}; doing nothing", &resource, &self.resource);
                     Cmd::none()
                 }
             }
@@ -222,7 +228,7 @@ impl App {
         Self {
             content: FetchStatus::Complete(Content::Homepage),
             is_loading: false,
-            resource: Some(Resource::Homepage),
+            resource: Resource::Homepage,
         }
     }
 
@@ -230,7 +236,7 @@ impl App {
         Self {
             content: FetchStatus::Complete(Content::from(workspace_listing)),
             is_loading: false,
-            resource: Some(Resource::WorkspaceListing),
+            resource: Resource::WorkspaceListing,
         }
     }
 
@@ -242,7 +248,7 @@ impl App {
         Self {
             content: FetchStatus::Complete(Content::from((record, object_info))),
             is_loading: false,
-            resource: Some(Resource::WorkspaceTop(workspace_id)),
+            resource: Resource::WorkspaceTop(workspace_id),
         }
     }
 }
