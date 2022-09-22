@@ -49,7 +49,7 @@ pub async fn api_workspace_top(
     match git_pmr_accessor.process_pathinfo(
         None,
         None,
-        |result| { format!("{}", result.commit.id()) }
+        |git_pmr_accessor, result| { format!("{}", result.commit.id()) }
     ).await {
         Ok(commit_id) => Ok(Json(JsonWorkspaceRecord {
             workspace: git_pmr_accessor.workspace,
@@ -79,7 +79,7 @@ pub async fn api_workspace_top_ssr(
     match git_pmr_accessor.process_pathinfo(
         None,
         None,
-        |result| { (format!("{}", result.commit.id()), <PathInfo>::from(result)) }
+        |git_pmr_accessor, result| { (format!("{}", result.commit.id()), <PathInfo>::from(result)) }
     ).await {
         Ok((commit_id, path_info)) => Ok((
             JsonWorkspaceRecord {
@@ -117,7 +117,10 @@ async fn api_workspace_pathinfo(
     match git_pmr_accessor.process_pathinfo(
         commit_id.as_deref(),
         path.as_deref(),
-        |result| <PathInfo>::from(result)
+        |git_pmr_accessor, result| <PathInfo>::from(result)
+        // TODO figure out how to best adapt this...
+        // |git_pmr_accessor, result| {
+        //     <WorkspacePathInfo>::from(&WorkspaceGitResultSet(&git_pmr_accessor.workspace, result))
     ).await {
         Ok(result) => Ok(Json(result)),
         Err(e) => {

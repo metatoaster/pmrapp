@@ -117,7 +117,9 @@ impl Application<Msg> for App {
                     </a>
                     <a relative href="/workspace/"
                         class={ match self.resource {
-                            Resource::WorkspaceListing | Resource::WorkspaceTop(_) => "active",
+                            Resource::WorkspaceListing |
+                            Resource::WorkspaceTop(..) |
+                            Resource::WorkspacePathInfo(..) => "active",
                             _ => ""
                         } }
                         on_click=|e| {
