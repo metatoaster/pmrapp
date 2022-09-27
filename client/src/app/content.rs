@@ -138,8 +138,9 @@ impl Content {
                         node! { <tbody> {
                             for info in tree_info.entries.iter() {
                                 self.show_workspace_file_row(
-                                    &path_info.commit.commit_id,
-                                    &path_info.path,
+                                    path_info.workspace_id,
+                                    path_info.commit.commit_id.clone(),
+                                    path_info.path.clone(),
                                     info,
                                 )
                             }
@@ -152,19 +153,38 @@ impl Content {
         }
     }
 
-    fn show_workspace_file_row(&self, commit_id: &str, path: &str, info: &TreeEntryInfo) -> Node<app::Msg> {
+    fn show_workspace_file_row(
+        &self,
+        workspace_id: i64,
+        commit_id: String,
+        path: String,
+        info: &TreeEntryInfo,
+    ) -> Node<app::Msg> {
+        let info_name = if info.kind == "tree" {
+            format!("{}/", info.name)
+        } else {
+            format!("{}", info.name)
+        };
         node! {
             <tr>
                 <td class=format!("gitobj-{}", info.kind)><span><a
                     href=format!("file/{}/{}{}",
                         commit_id,
                         path,
-                        if info.kind == "tree" {
-                            format!("{}/", info.name)
-                        } else {
-                            format!("{}", info.name)
-                        },
-                    )>{ text!("{}", info.name) }</a></span>
+                        &info_name,
+                    )
+                    on_click=move |e| {
+                        e.prevent_default();
+                        Msg::Retrieve(
+                            Resource::WorkspacePathInfo(
+                                workspace_id,
+                                commit_id.clone(),
+                                format!("{}{}", path, &info_name),
+                            ),
+                            format!("{}/{}{}", commit_id, path, &info_name),
+                        )
+                    }
+                    >{ text!("{}", info.name) }</a></span>
                 </td>
                 <td></td>
                 <td></td>

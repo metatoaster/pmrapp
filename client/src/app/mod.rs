@@ -159,7 +159,14 @@ impl Application<Msg> for App {
                     self.fetch_workspace(resource, workspace_id)
                 }
                 Resource::WorkspacePathInfo(workspace_id, ref commit_id, ref path) => {
-                    self.fetch_workspace(resource, workspace_id)
+                    let commit_id = commit_id.clone();
+                    let path = path.clone();
+                    self.fetch_workspace_pathinfo(
+                        resource,
+                        workspace_id,
+                        commit_id,
+                        path,
+                    )
                 }
                 Resource::Unset => {
                     Cmd::none()
