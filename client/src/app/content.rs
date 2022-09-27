@@ -121,27 +121,31 @@ impl Content {
                     </tr>
                 </thead>
                 {
-                    match path_info {
-                        Some(path_info) => {
-                            match &path_info.object {
-                                Some(PathObject::TreeInfo(tree_info)) => {
-                                    node! { <tbody> {
-                                        for info in tree_info.entries.iter() {
-                                            self.show_workspace_file_row(
-                                                &path_info.commit.commit_id,
-                                                &path_info.path,
-                                                info,
-                                            )
-                                        }
-                                    } </tbody> }
-                                },
-                                _ => node! {},
-                            }
-                        }
-                        None => node! {},
-                    }
+                    self.show_workspace_file_table_body(&path_info)
                 }
             </table>
+        }
+    }
+
+    fn show_workspace_file_table_body(&self, path_info: &Option<WorkspacePathInfo>) -> Node<app::Msg> {
+        match path_info {
+            Some(path_info) => {
+                match &path_info.object {
+                    Some(PathObject::TreeInfo(tree_info)) => {
+                        node! { <tbody> {
+                            for info in tree_info.entries.iter() {
+                                self.show_workspace_file_row(
+                                    &path_info.commit.commit_id,
+                                    &path_info.path,
+                                    info,
+                                )
+                            }
+                        } </tbody> }
+                    },
+                    _ => node! {},
+                }
+            }
+            None => node! {},
         }
     }
 
