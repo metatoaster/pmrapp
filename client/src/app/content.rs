@@ -12,6 +12,9 @@ use pmrmodel_base::{
         PathObject,
         TreeEntryInfo,
     },
+    merged::{
+        WorkspacePathInfo,
+    }
 };
 
 use crate::model::JsonWorkspaceRecord;
@@ -24,8 +27,8 @@ use crate::app::Msg;
 pub enum Content {
     Homepage,
     WorkspaceListing(JsonWorkspaceRecords),
-    WorkspaceTop(JsonWorkspaceRecord, Option<PathInfo>),
-    WorkspacePathInfo(PathInfo),
+    WorkspaceTop(JsonWorkspaceRecord, Option<WorkspacePathInfo>),
+    WorkspacePathInfo(WorkspacePathInfo),
 }
 
 
@@ -110,7 +113,7 @@ impl Content {
         }
     }
 
-    fn show_workspace_file_table(&self, path_info: &Option<PathInfo>) -> Node<app::Msg> {
+    fn show_workspace_file_table(&self, path_info: &Option<WorkspacePathInfo>) -> Node<app::Msg> {
         node! {
             <table class="file-listing">
                 <thead>

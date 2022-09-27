@@ -4,6 +4,7 @@ use pmrmodel_base::{
         // WorkspaceRecord,
     },
     git::PathInfo,
+    merged::WorkspacePathInfo,
 };
 use sauron::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -248,7 +249,7 @@ impl App {
     pub fn with_workspace_top(
         workspace_id: i64,
         record: JsonWorkspaceRecord,
-        object_info: Option<PathInfo>,
+        object_info: Option<WorkspacePathInfo>,
     ) -> Self {
         Self {
             content: FetchStatus::Complete(Content::from((record, object_info))),
@@ -261,7 +262,7 @@ impl App {
         workspace_id: i64,
         commit_id: String,
         filepath: String,
-        object_info: PathInfo,
+        object_info: WorkspacePathInfo,
     ) -> Self {
         Self {
             content: FetchStatus::Complete(Content::from(object_info)),
