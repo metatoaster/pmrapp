@@ -65,7 +65,7 @@ impl Content {
                     </div>
                 }
             },
-            Content::WorkspaceTop(workspace_record, path_info) => {
+            Content::WorkspaceTop(workspace_record, wks_path_info) => {
                 node! {
                     <div class="main">
                         <h1>{ text!("{}", &workspace_record.workspace.description.as_ref().unwrap_or(
@@ -76,17 +76,35 @@ impl Content {
                         </dl>
                         <div class="workspace-pathinfo">
                         {
-                            self.show_workspace_file_table(&path_info)
+                            self.show_workspace_file_table((&wks_path_info).as_ref())
                         }
                         </div>
                     </div>
                 }
             },
-            Content::WorkspacePathInfo(path_info) => {
+            Content::WorkspacePathInfo(wks_path_info) => {
                 node! {
                     <div class="main">
+                        <h1>
+                        {
+                            text!("{}", &wks_path_info.description.as_ref().unwrap_or(
+                                &format!("Workspace {}", &wks_path_info.workspace_id)))
+                        }
+                        </h1>
                         <div class="workspace-pathinfo">
-                        { text!("{:?}", path_info) }
+                        {
+                            match &wks_path_info.object {
+                                Some(PathObject::TreeInfo(..)) => {
+                                    self.show_workspace_file_table(Some(&wks_path_info))
+                                }
+                                Some(PathObject::FileInfo(file_info)) => {
+                                    text!("{:?}", file_info)
+                                }
+                                _ => {
+                                    text!("")
+                                }
+                            }
+                        }
                         </div>
                     </div>
                 }
@@ -113,7 +131,7 @@ impl Content {
         }
     }
 
-    fn show_workspace_file_table(&self, path_info: &Option<WorkspacePathInfo>) -> Node<app::Msg> {
+    fn show_workspace_file_table(&self, wks_path_info: Option<&WorkspacePathInfo>) -> Node<app::Msg> {
         node! {
             <table class="file-listing">
                 <thead>
@@ -124,32 +142,60 @@ impl Content {
                     </tr>
                 </thead>
                 {
-                    self.show_workspace_file_table_body(&path_info)
+                    self.show_workspace_file_table_body(wks_path_info)
                 }
             </table>
         }
     }
 
-    fn show_workspace_file_table_body(&self, path_info: &Option<WorkspacePathInfo>) -> Node<app::Msg> {
-        match path_info {
-            Some(path_info) => {
-                match &path_info.object {
+    fn show_workspace_file_table_body(&self, wks_path_info: Option<&WorkspacePathInfo>) -> Node<app::Msg> {
+        match wks_path_info {
+            Some(wks_path_info) => {
+                match &wks_path_info.object {
                     Some(PathObject::TreeInfo(tree_info)) => {
-                        node! { <tbody> {
-                            for info in tree_info.entries.iter() {
-                                self.show_workspace_file_row(
-                                    path_info.workspace_id,
-                                    path_info.commit.commit_id.clone(),
-                                    path_info.path.clone(),
-                                    info,
-                                )
+                        node! {
+                            <tbody>
+                            {
+                                if wks_path_info.path != "" {
+                                    // TODO placeholder, this .. does not actually work
+                                    self.show_workspace_file_row(
+                                        wks_path_info.workspace_id,
+                                        wks_path_info.commit.commit_id.clone(),
+                                        wks_path_info.path.clone(),
+                                        "pardir",
+                                        "..",
+                                    )
+                                }
+                                else {
+                                    // XXX Sauron really doesn't like empty
+                                    // node! macros, it seems to easily trigger
+                                    // patch errors.
+                                    // node! {}
+                                    text!("")
+                                }
                             }
-                        } </tbody> }
+                            {
+                                for info in tree_info.entries.iter() {
+                                    self.show_workspace_file_row(
+                                        wks_path_info.workspace_id,
+                                        wks_path_info.commit.commit_id.clone(),
+                                        wks_path_info.path.clone(),
+                                        &info.kind,
+                                        &info.name,
+                                    )
+                                }
+                            }
+                            </tbody>
+                        }
                     },
-                    _ => node! {},
+                    _ => node! {
+                        <tbody></tbody>
+                    },
                 }
             }
-            None => node! {},
+            None => node! {
+                <tbody></tbody>
+            },
         }
     }
 
@@ -158,33 +204,31 @@ impl Content {
         workspace_id: i64,
         commit_id: String,
         path: String,
-        info: &TreeEntryInfo,
+        kind: &str,
+        name: &str,
     ) -> Node<app::Msg> {
-        let info_name = if info.kind == "tree" {
-            format!("{}/", info.name)
+        let href_name = if kind == "tree" {
+            format!("{}/", name)
         } else {
-            format!("{}", info.name)
+            format!("{}", name)
         };
+        let href = format!("/workspace/{}/file/{}/{}{}", workspace_id, commit_id, path, &href_name);
         node! {
             <tr>
-                <td class=format!("gitobj-{}", info.kind)><span><a
-                    href=format!("file/{}/{}{}",
-                        commit_id,
-                        path,
-                        &info_name,
-                    )
+                <td class=format!("gitobj-{}", kind)><span><a
+                    href=&href
                     on_click=move |e| {
                         e.prevent_default();
                         Msg::Retrieve(
                             Resource::WorkspacePathInfo(
                                 workspace_id,
                                 commit_id.clone(),
-                                format!("{}{}", path, &info_name),
+                                format!("{}{}", path, &href_name),
                             ),
-                            format!("{}/{}{}", commit_id, path, &info_name),
+                            href.clone(),
                         )
                     }
-                    >{ text!("{}", info.name) }</a></span>
+                    >{ text!("{}", name) }</a></span>
                 </td>
                 <td></td>
                 <td></td>
