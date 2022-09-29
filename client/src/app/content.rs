@@ -83,13 +83,25 @@ impl Content {
                 }
             },
             Content::WorkspacePathInfo(wks_path_info) => {
+                let workspace_id = wks_path_info.workspace_id;
                 node! {
                     <div class="main">
                         <h1>
-                        {
-                            text!("{}", &wks_path_info.description.as_ref().unwrap_or(
-                                &format!("Workspace {}", &wks_path_info.workspace_id)))
-                        }
+                            <a
+                                relative
+                                href=format!("/workspace/{}/", &wks_path_info.workspace_id)
+                                on_click=move |e| {
+                                    e.prevent_default();
+                                    Msg::Retrieve(
+                                        Resource::WorkspaceTop(workspace_id),
+                                        format!("/workspace/{}/", workspace_id)
+                                    )
+                                }>
+                            {
+                                text!("{}", &wks_path_info.description.as_ref().unwrap_or(
+                                    &format!("Workspace {}", &wks_path_info.workspace_id)))
+                            }
+                            </a>
                         </h1>
                         <div class="workspace-pathinfo">
                         {
@@ -207,14 +219,28 @@ impl Content {
         kind: &str,
         name: &str,
     ) -> Node<app::Msg> {
-        let href_name = if kind == "tree" {
-            format!("{}/", name)
+        let path_name = if name == ".." {
+            let idx = path[0..path.len() - 1].rfind('/').unwrap_or(0);
+            if idx == 0 {
+                "".to_string()
+            } else {
+                format!("{}/", &path[0..idx])
+            }
         } else {
-            format!("{}", name)
+            format!("{}{}", path, if kind == "tree" {
+                format!("{}/", name)
+            } else {
+                format!("{}", name)
+            })
         };
-        let href = format!("/workspace/{}/file/{}/{}{}", workspace_id, commit_id, path, &href_name);
+        let href = format!("/workspace/{}/file/{}/{}", workspace_id, commit_id, &path_name);
+        // Sauron needs this key attribute, otherwise the correct event
+        // sometimes don't get patched in...
+        // https://github.com/ivanceras/sauron/issues/63
+        let key = path_name.clone();
+        // TODO need to test putting a proper key at the table itself...
         node! {
-            <tr>
+            <tr key=key>
                 <td class=format!("gitobj-{}", kind)><span><a
                     href=&href
                     on_click=move |e| {
@@ -223,7 +249,7 @@ impl Content {
                             Resource::WorkspacePathInfo(
                                 workspace_id,
                                 commit_id.clone(),
-                                format!("{}{}", path, &href_name),
+                                path_name.clone(),
                             ),
                             href.clone(),
                         )
