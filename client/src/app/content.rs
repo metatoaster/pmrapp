@@ -169,7 +169,6 @@ impl Content {
                             <tbody>
                             {
                                 if wks_path_info.path != "" {
-                                    // TODO placeholder, this .. does not actually work
                                     self.show_workspace_file_row(
                                         wks_path_info.workspace_id,
                                         wks_path_info.commit.commit_id.clone(),
@@ -179,11 +178,7 @@ impl Content {
                                     )
                                 }
                                 else {
-                                    // XXX Sauron really doesn't like empty
-                                    // node! macros, it seems to easily trigger
-                                    // patch errors.
-                                    // node! {}
-                                    text!("")
+                                    node! {}
                                 }
                             }
                             {

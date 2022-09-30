@@ -205,6 +205,12 @@ impl Application<Msg> for App {
             }
         }
     }
+
+    fn style(&self) -> std::string::String {
+        // TODO figure out how/where should this be integrated/merged with
+        // existing definitions
+        "".to_string()
+    }
 }
 
 impl App {
