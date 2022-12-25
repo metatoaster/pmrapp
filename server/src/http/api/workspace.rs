@@ -6,8 +6,8 @@ use axum::{
 };
 use pmrmodel::model::workspace::WorkspaceBackend;
 use pmrmodel::repo::git::{
-    WorkspaceGitResultSet,
-    GitPmrAccessor,
+    WorkspaceGitResult,
+    PmrBackendWR,
 };
 use pmrmodel_base::merged::WorkspacePathInfo;
 use pmrmodel_base::workspace::JsonWorkspaceRecords;
@@ -44,25 +44,21 @@ pub async fn api_workspace_top(
         Ok(workspace) => workspace,
         Err(_) => return Err(Error::NotFound),
     };
-    let git_pmr_accessor = GitPmrAccessor::new(
+    let commit_id = match PmrBackendWR::new(
         &ctx.backend,
         PathBuf::from(&ctx.config.pmr_git_root),
-        workspace
-    );
-    match git_pmr_accessor.process_pathinfo(
-        None,
-        None,
-        |_, result| { format!("{}", result.commit.id()) }
-    ).await {
-        Ok(commit_id) => Ok(Json(JsonWorkspaceRecord {
-            workspace: git_pmr_accessor.workspace,
-            head_commit: Some(commit_id),
-        })),
-        Err(_) => Ok(Json(JsonWorkspaceRecord {
-            workspace: git_pmr_accessor.workspace,
-            head_commit: None,
-        })),
-    }
+        &workspace
+    ) {
+        Ok(pmrbackend) => match pmrbackend.pathinfo(None, None) {
+            Ok(result) => Some(format!("{}", result.commit.id())),
+            Err(_) => None,
+        },
+        Err(_) => None
+    };
+    Ok(Json(JsonWorkspaceRecord {
+        workspace: workspace,
+        head_commit: commit_id,
+    }))
 }
 
 pub async fn api_workspace_top_ssr(
@@ -73,40 +69,31 @@ pub async fn api_workspace_top_ssr(
         Ok(workspace) => workspace,
         Err(_) => return Err(Error::NotFound),
     };
-    let git_pmr_accessor = GitPmrAccessor::new(
+    let pmrbackend = PmrBackendWR::new(
         &ctx.backend,
         PathBuf::from(&ctx.config.pmr_git_root),
-        workspace
-    );
+        &workspace
+    )?;
 
-    match git_pmr_accessor.process_pathinfo(
-        None,
-        None,
-        |git_pmr_accessor, result| (
-            format!("{}", result.commit.id()),
-            <WorkspacePathInfo>::from(
-                &WorkspaceGitResultSet::new(
-                    &git_pmr_accessor.workspace,
+    let (head_commit, path_info) = match pmrbackend.pathinfo(None, None) {
+        Ok(result) => (
+            Some(format!("{}", result.commit.id())),
+            Some(<WorkspacePathInfo>::from(
+                &WorkspaceGitResult::new(
+                    &pmrbackend.workspace,
                     &result,
                 )
-            ),
-        )
-    ).await {
-        Ok((commit_id, path_info)) => Ok((
-            JsonWorkspaceRecord {
-                workspace: git_pmr_accessor.workspace,
-                head_commit: Some(commit_id),
-            },
-            Some(path_info),
-        )),
-        Err(_) => Ok((
-            JsonWorkspaceRecord {
-                workspace: git_pmr_accessor.workspace,
-                head_commit: None,
-            },
-            None,
-        )),
-    }
+            )),
+        ),
+        Err(_) => (None, None)
+    };
+    Ok((
+        JsonWorkspaceRecord {
+            workspace: workspace,
+            head_commit: head_commit,
+        },
+        path_info,
+    ))
 }
 
 async fn api_workspace_pathinfo(
@@ -119,29 +106,29 @@ async fn api_workspace_pathinfo(
         Ok(workspace) => workspace,
         Err(_) => return Err(Error::NotFound),
     };
-    let git_pmr_accessor = GitPmrAccessor::new(
+    let pmrbackend = PmrBackendWR::new(
         &ctx.backend,
         PathBuf::from(&ctx.config.pmr_git_root),
-        workspace
-    );
+        &workspace
+    )?;
 
-    match git_pmr_accessor.process_pathinfo(
+    let result = match pmrbackend.pathinfo(
         commit_id.as_deref(),
         path.as_deref(),
-        |git_pmr_accessor, result| <WorkspacePathInfo>::from(
-            &WorkspaceGitResultSet::new(
-                &git_pmr_accessor.workspace,
+    ) {
+        Ok(result) => Ok(Json(<WorkspacePathInfo>::from(
+            &WorkspaceGitResult::new(
+                &workspace,
                 &result,
             )
-        )
-    ).await {
-        Ok(result) => Ok(Json(result)),
+        ))),
         Err(e) => {
             // TODO log the URI triggering these messages?
-            log::info!("git_pmr_accessor.process_pathinfo error: {:?}", e);
+            log::info!("pmrbackend.pathinfo error: {:?}", e);
             Err(Error::NotFound)
         }
-    }
+    };
+    result
 }
 
 pub async fn api_workspace_pathinfo_workspace_id(
