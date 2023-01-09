@@ -29,6 +29,8 @@ pub fn router() -> Router {
             get(api_workspace_pathinfo_workspace_id_commit_id))
         .route("/:workspace_id/file/:commit_id/*path",
             get(api_workspace_pathinfo_workspace_id_commit_id_path))
+        .route("/:workspace_id/raw/:commit_id/*path",
+            get(api_workspace_pathinfo_workspace_id_commit_id_path))
 }
 
 pub async fn api_workspace(ctx: Extension<AppContext>) -> Result<Json<JsonWorkspaceRecords>> {

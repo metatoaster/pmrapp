@@ -16,6 +16,8 @@ pub enum Error {
     NotFound,
 
     #[error("500 Internal Server Error")]
+    Error,
+    #[error("500 Internal Server Error")]
     SerdeJson(#[from] serde_json::error::Error),
     #[error("500 Internal Server Error")]
     Sqlx(#[from] sqlx::Error),

@@ -110,7 +110,22 @@ impl Content {
                                     self.show_workspace_file_table(Some(&wks_path_info))
                                 }
                                 Some(PathObject::FileInfo(file_info)) => {
-                                    text!("{:?}", file_info)
+                                    let href = format!(
+                                        "/workspace/{}/raw/{}/{}",
+                                        &wks_path_info.workspace_id,
+                                        &wks_path_info.commit.commit_id,
+                                        &wks_path_info.path,
+                                    );
+                                    node! {
+                                        <div>
+                                        {
+                                            text!("{:?}", file_info)
+                                        }
+                                        </div>
+                                        <div>
+                                            <a href=href>"download"</a>
+                                        </div>
+                                    }
                                 }
                                 _ => {
                                     text!("")
@@ -195,14 +210,10 @@ impl Content {
                             </tbody>
                         }
                     },
-                    _ => node! {
-                        <tbody></tbody>
-                    },
+                    _ => node! {},
                 }
             }
-            None => node! {
-                <tbody></tbody>
-            },
+            None => node! {},
         }
     }
 
