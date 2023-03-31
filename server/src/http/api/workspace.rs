@@ -5,12 +5,12 @@ use axum::{
     Router,
 };
 use pmrmodel::model::workspace::WorkspaceBackend;
-use pmrmodel::repo::git::{
+use pmrrepo::git::{
     WorkspaceGitResult,
     PmrBackendWR,
 };
 use pmrmodel_base::merged::WorkspacePathInfo;
-use pmrmodel_base::workspace::JsonWorkspaceRecords;
+use pmrmodel_base::workspace::WorkspaceRecords;
 use std::path::PathBuf;
 
 use client::model::JsonWorkspaceRecord;
@@ -33,9 +33,9 @@ pub fn router() -> Router {
             get(api_workspace_pathinfo_workspace_id_commit_id_path))
 }
 
-pub async fn api_workspace(ctx: Extension<AppContext>) -> Result<Json<JsonWorkspaceRecords>> {
+pub async fn api_workspace(ctx: Extension<AppContext>) -> Result<Json<WorkspaceRecords>> {
     let records = WorkspaceBackend::list_workspaces(&ctx.backend).await?;
-    Ok(Json(JsonWorkspaceRecords { workspaces: records }))
+    Ok(Json(WorkspaceRecords { workspaces: records }))
 }
 
 pub async fn api_workspace_top(

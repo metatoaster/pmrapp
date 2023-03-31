@@ -7,4 +7,4 @@ members = [
 [patch.crates-io]
 pmrmodel = { git = "https://github.com/metatoaster/pmrmodel.git", branch = "main" }
 pmrmodel_base = { git = "https://github.com/metatoaster/pmrmodel.git", branch = "main" }
-# pmrmodel = { path = "../pmrmodel" }
+pmrrepo = { git = "https://github.com/metatoaster/pmrrepo.git", branch = "main" }

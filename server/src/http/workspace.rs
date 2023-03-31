@@ -6,7 +6,7 @@ use axum::{
     Router,
 };
 use pmrmodel::model::workspace::WorkspaceBackend;
-use pmrmodel::repo::git::{
+use pmrrepo::git::{
     ObjectType,
     GitResultTarget,
     PmrBackendWR,

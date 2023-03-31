@@ -1,6 +1,6 @@
 use pmrmodel_base::{
     workspace::{
-        JsonWorkspaceRecords,
+        WorkspaceRecords,
         // WorkspaceRecord,
     },
     git::PathInfo,
@@ -251,7 +251,7 @@ impl App {
         }
     }
 
-    pub fn with_workspace_listing(workspace_listing: JsonWorkspaceRecords) -> Self {
+    pub fn with_workspace_listing(workspace_listing: WorkspaceRecords) -> Self {
         Self {
             content: FetchStatus::Complete(Content::from(workspace_listing)),
             is_loading: false,

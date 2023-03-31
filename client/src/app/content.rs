@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use pmrmodel_base::{
     workspace::{
-        JsonWorkspaceRecords,
+        WorkspaceRecords,
         WorkspaceRecord,
     },
     git::{
@@ -26,7 +26,7 @@ use crate::app::Msg;
 )]
 pub enum Content {
     Homepage,
-    WorkspaceListing(JsonWorkspaceRecords),
+    WorkspaceListing(WorkspaceRecords),
     WorkspaceTop(JsonWorkspaceRecord, Option<WorkspacePathInfo>),
     WorkspacePathInfo(WorkspacePathInfo),
 }
